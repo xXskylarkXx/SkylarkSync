@@ -9,8 +9,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -26,8 +28,8 @@ import util.PathUtil;
 import util.TimeUtil;
 
 public class SyncThread extends Thread{
-	Task T=Share.curentTask;
-	public boolean running,stop=false;
+	public Task T=Share.curentTask;
+	public boolean running,stop=false,cnt;
 	@Override
 	public void run() {
 		Share.doneCpyTask=true;
@@ -36,23 +38,25 @@ public class SyncThread extends Thread{
 		try {Thread.sleep(10000);} catch (InterruptedException e) {e.printStackTrace();}
 		while(!stop) {
 			/*Sleep*/
+			running=false;
 			if(!firstload) {
 				T.FileMD_new.clear(); T.FileMD_old.clear(); System.gc();
 				for(int i=0;i<(T.freq*60000)/1000;i++) {
-					if(Share.pause) break;
+					cnt=false;
+					if(Share.pause) {cnt=true; break;}
 					try {Thread.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
 				}
+				if(cnt) continue;
 			}else firstload=false;
 			/*Main thread interaction*/
-				running=false;
-				while(Share.pause)try {Thread.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
 				running=true;
+				Info.out("Task"+T.id+"("+T.name+")"+" Start synchronize...");
 			/*Synchronization*/
 				/*Collect data*/
-				boolean usedTimepointN=false;
 				try {FileOperation.writeFile(T.pathTo+"\\"+Define.dataFolder+"\\tmp\\creator.txt", "");} catch (IOException e1) {e1.printStackTrace();}
 				T.FileMD_new.clear();
-				try {getNewFileMD(T.pathFrom,0,T.FileMD_new);} catch (IOException e1) {e1.printStackTrace();}
+				Info.out("Task"+T.id+"("+T.name+")"+" Scanning files...");
+				try {try {getNewFileMD(T.pathFrom,0,T.FileMD_new,1);} catch (InterruptedException e) {e.printStackTrace();}} catch (IOException e1) {e1.printStackTrace();}
 				String path_file_timepointN=T.pathTo+"\\"+Define.dataFolder+"\\TimePointN.txt";
 				File file_timepointN=new File(path_file_timepointN);
 				if(!file_timepointN.exists()) {
@@ -62,57 +66,76 @@ public class SyncThread extends Thread{
 				try {T.timepointN=Integer.parseInt(FileOperation.readFile(path_file_timepointN));} catch (NumberFormatException | IOException e3) {e3.printStackTrace();}
 				File file_FMD=new File(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt");
 				if(!file_FMD.exists()) {
-					try {FileOperation.writeFile(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",mapToString(Share.thpool[T.id].T.FileMD_new.entrySet().iterator()));} catch (IOException e) {e.printStackTrace();}
+					//Info.wrn("Task"+T.id+"("+T.name+")"+" 0");
+					try {FileOperation.writeFile(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",mapToString(T.FileMD_new));} catch (IOException e) {e.printStackTrace();}
 					Info.wrn("Task"+T.id+"("+T.name+")"+" FilesLastModifiedDate.txt doesn't exists, created a new one.");
-				}else try {freadFileMD(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",T.FileMD_old);} catch (IOException e2) {e2.printStackTrace();}
+				}else try {freadFileMD(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",T.FileMD_old);} catch (IOException | InterruptedException e2) {e2.printStackTrace();}
+				Info.out("Task"+T.id+"("+T.name+")"+" File scan finished.");
 				/*Compare files*/
-				Iterator<Entry<String, String>> it_new=T.FileMD_new.entrySet().iterator(), it_old=T.FileMD_old.entrySet().iterator();
+				Info.out("Task"+T.id+"("+T.name+")"+" Copying files...");
 				String nowTime=TimeUtil.timeFormat.format(new Date());
-				while (it_new.hasNext()) {
-				    Entry<String, String> cur = it_new.next();
-				    String curKey=cur.getKey(), curVal=cur.getValue();
-				    String resu=T.FileMD_old.get(curKey);
+				try {FileOperation.writeFileTxt(T.pathTo+"\\"+T.timepointN+"__"+nowTime+"\\"+Define.delListFileName, "");} catch (IOException e1) {e1.printStackTrace();}
+				//Info.wrn("Task"+T.id+"("+T.name+")"+" 1");
+				try {FileOperation.writeFileTxt(path_file_timepointN, String.valueOf(T.timepointN+1));} catch (IOException e) {e.printStackTrace();}
+				String curKey="", curVal="" ,resu="";
+				int totalCpy=0; double totalCpySize=0; File tmpf0;
+				for (Map.Entry<String, String> entry : T.FileMD_new.entrySet()) {
+					//limitCPU_usage(1);
+				    curKey=entry.getKey(); curVal=entry.getValue();
+				    resu=T.FileMD_old.get(curKey);
 				    String pathDest=T.pathTo+"\\"+T.timepointN+"__"+nowTime+"\\"+curKey;
 				    File tmpF=new File(T.pathFrom+"\\"+curKey);
 				    if(curVal.equals(Define.occupied)) {Info.wrn("Task"+T.id+"("+T.name+") "+tmpF.getName()+" were locked by other programme, skipped it."); continue;}
 				    if(resu==null) {/*If this file doesn't exists*/
 				    	FileOperation.cpyFile(T.pathFrom+"\\"+curKey,pathDest);
-				    	usedTimepointN=true;
+				    	tmpf0=new File(T.pathFrom+"\\"+curKey);
+				    	totalCpySize+=tmpf0.length()/1073741824;
+				    	totalCpy++;
 				    	continue;
 				    }
 				    if(!resu.equals(curVal)) {/*If this file were modified*/
 				    	FileOperation.cpyFile(T.pathFrom+"\\"+curKey,pathDest);
-				    	usedTimepointN=true;
+				    	tmpf0=new File(T.pathFrom+"\\"+curKey);
+				    	totalCpySize+=tmpf0.length()/1073741824;
+				    	totalCpy++;
 				    	continue;
 				    }
 				}
+				Info.out("Task"+T.id+"("+T.name+")"+" Copied "+totalCpy+" files ("+String.format("%.1f", totalCpySize)+"GB) in total, done.");
 				String delFileList="";
-				while (it_old.hasNext()) {
-				    Entry<String, String> cur = it_old.next();
-				    String curKey=cur.getKey(), curVal=cur.getValue();
-				    String resu=T.FileMD_new.get(curKey);
+				Info.out("Task"+T.id+"("+T.name+")"+" Saving task data...");
+				for (Map.Entry<String, String> entry : T.FileMD_old.entrySet()) {
+					//limitCPU_usage(1);
+					curKey=entry.getKey(); curVal=entry.getValue();
+				    resu=T.FileMD_new.get(curKey);
 				    if(resu==null) {/*If this file were deleted*/
 				    	delFileList+=(curKey+"\r\n");
-				    	usedTimepointN=true;
 				    	continue;
 				    }
 				}
 				/*Synchronized ,saving data*/
-				if(usedTimepointN) try {FileOperation.writeFileTxt(T.pathTo+"\\"+T.timepointN+"__"+nowTime+"\\"+Define.delListFileName, delFileList); usedTimepointN=true;} catch (IOException e1) {e1.printStackTrace();}
-				try {FileOperation.writeFileTxt(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",mapToString(Share.thpool[T.id].T.FileMD_new.entrySet().iterator()));} catch (IOException e) {e.printStackTrace();}
-				if(usedTimepointN) T.timepointN++;
-				try {FileOperation.writeFileTxt(path_file_timepointN, String.valueOf(T.timepointN));} catch (IOException e) {e.printStackTrace();}
+				try {FileOperation.writeFileTxt(T.pathTo+"\\"+T.timepointN+"__"+nowTime+"\\"+Define.delListFileName, delFileList);} catch (IOException e1) {e1.printStackTrace();}
+				try {FileOperation.writeFileTxt(T.pathTo+"\\"+Define.dataFolder+"\\FilesLastModifiedDate.txt",mapToString(T.FileMD_new));} catch (IOException e) {e.printStackTrace();}
+				T.timepointN++;
+				Info.out("Task"+T.id+"("+T.name+")"+" Save task data finished.");
+				Info.out("Task"+T.id+"("+T.name+")"+" Synchronized.");
 		}
 	}
-	public static String mapToString(Iterator<Entry<String, String>> it) {
-		String resu = "";
-	    while (it.hasNext()) {
-	      Entry<String, String> entry = it.next();
-	      resu+=entry.getKey()+Define.splitSig+entry.getValue()+"\r\n";
-	    }
-	    return resu;
+	public void limitCPU_usage(int requestFreq) {
+		if(requestFreq<=0) return;
+		do{try {Thread.sleep(requestFreq);} catch (InterruptedException e) {e.printStackTrace();}}while(!T.active);
+		T.active=false;
 	}
-	public void getNewFileMD(String pathName,int depth,TreeMap<String,String> resu) throws IOException {
+	public String mapToString(HashMap<String,String> Tmap) {
+		StringBuffer resu = new StringBuffer();
+		for (Map.Entry<String, String> entry : Tmap.entrySet()) {
+			//if(T.delay>0) limitCPU_usage(T.delay/10*15);
+			//System.out.print("*");
+			resu.append(entry.getKey()); resu.append(Define.splitSig); resu.append(entry.getValue()); resu.append("\r\n");
+		}
+	    return resu.toString();
+	}
+	public void getNewFileMD(String pathName,int depth,HashMap<String,String> resu,int requestFreq) throws IOException, InterruptedException {
 		File dirFile = new File(pathName);   
         if (!dirFile.exists()) return;
         if (!dirFile.isDirectory()) {
@@ -124,19 +147,21 @@ public class SyncThread extends Thread{
             }
             return ;  
         }
+        limitCPU_usage(requestFreq);
         String[] fileList = dirFile.list();
         int currentDepth=depth+1;  
         for (int i = 0; i < fileList.length; i++) {
+        	limitCPU_usage(requestFreq);
             String string = fileList[i];   
             File file = new File(dirFile.getPath(),string);  
             String path = file.getAbsolutePath();
-            if (file.isDirectory()) getNewFileMD(file.getCanonicalPath(),currentDepth,resu);  
+            if (file.isDirectory()) getNewFileMD(file.getCanonicalPath(),currentDepth,resu,requestFreq);  
             else if(FileOperation.checkF_Occupied(path)) resu.put(PathUtil.getRightPath(T.pathFrom, path),Define.occupied);
             		else resu.put(PathUtil.getRightPath(T.pathFrom, path),FileOperation.getFileFingerprint(path, 0));
         }
         return;
 	}
-	public void freadFileMD(String path,TreeMap<String,String> resu) throws IOException {
+	public void freadFileMD(String path,HashMap<String,String> resu) throws IOException, InterruptedException {
 		String tmp=FileOperation.readFile(path);
 		String[] tmp0=tmp.split("\\r?\\n");
 		for(int i=0;i<tmp0.length;i++) {
@@ -149,7 +174,7 @@ public class SyncThread extends Thread{
 			resu.put(tmp1[0], tmp1[1]);
 		}
 	}
-	public void fixFileMD(TreeMap<String,String> resu) throws IOException {
+	public void fixFileMD(HashMap<String,String> resu) throws IOException, InterruptedException {
 		List timepoints=new ArrayList<Timepoint>(); 
 		File Froot=new File(T.pathTo);
 		String tmp[]=Froot.list();

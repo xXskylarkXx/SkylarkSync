@@ -13,6 +13,7 @@ import java.util.List;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import share.Define;
+import share.Share;
 
 public class FileOperation {
 	static String encoding = "UTF-8";  
@@ -57,7 +58,7 @@ public class FileOperation {
 	    out.append(content);
 	    out.close();
 	}
-	public static void findFiles(String pathName,int depth,List resu) throws IOException{
+	public static void findFiles(String pathName,int depth,List resu) throws IOException, InterruptedException{
         File dirFile = new File(pathName);   
         if (!dirFile.exists()) return;
         if (!dirFile.isDirectory()) {

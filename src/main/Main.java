@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import share.Timepoint;
 import util.FileOperation;
 import util.Info;
 import util.PathUtil;
+import util.TaskFFindTimer;
 
 public class Main {
 	public static void main(String[] args) throws IOException, InterruptedException {
@@ -32,13 +34,20 @@ public class Main {
 				Task newT=new Task();
 				String tmp=FileOperation.readFile((String) pathTaskFiles.get(i));;
 				String[] T=tmp.split("\\r?\\n");
-				newT.name=T[0]; newT.id=Integer.parseInt(T[1]); newT.pathFrom=T[2]; newT.pathTo=T[3]; newT.freq=Integer.parseInt(T[4]);
-				newT.FileMD_new=new TreeMap<String,String>(); newT.FileMD_old=new TreeMap<String,String>();
+				if(T.length<6) {Info.err("One of your task configure file is unqualified!"); System.exit(0);}
+				newT.name=T[0]; newT.id=Integer.parseInt(T[1]); newT.pathFrom=T[2]; newT.pathTo=T[3]; newT.freq=Integer.parseInt(T[4]); newT.delay=Integer.parseInt(T[5]);
+				newT.FileMD_new=new HashMap<String,String>(); newT.FileMD_old=new HashMap<String,String>();
 				Share.curentTask=newT;
+				
 				Share.thpool[newT.id]=new SyncThread();
 				Share.thpool[newT.id].start();
 				Share.doneCpyTask=false;
 				while(Share.doneCpyTask==false) Thread.sleep(1);
+				
+				Share.thpool_TFFT[newT.id]=new TaskFFindTimer();
+				Share.thpool_TFFT[newT.id].start();
+				Share.doneCpyTaskFFT=false;
+				while(Share.doneCpyTaskFFT==false) Thread.sleep(1);
 			}
 		/*User interaction*/
 			while(true) {
