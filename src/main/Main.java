@@ -22,9 +22,12 @@ import util.PathUtil;
 import util.TaskFFindTimer;
 
 public class Main {
+	public static List ids=new ArrayList<Integer>();
 	public static void main(String[] args) throws IOException, InterruptedException {
 		/*Initialization*/
-			System.out.print("\r\n-----------Author information-----------\r\n"+"Author	: Skylark\r\n" + "Contact	: QQ2991742773\r\n" + "E-mail	: 2991742773@qq.com\n"+"----------------------------------------\r\n");
+			if(System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1) Define.sl="\\";
+			System.out.println(FileOperation.readFile("logo.txt"));
+			System.out.println("<==============Type \"help\" or see READ_ME.pdf to learn more.==============>\r\n");
 			//FileOperation.readFile("config/xxx.txt");
 		/*Load tasks*/
 			List pathTaskFiles = new ArrayList<String>();
@@ -34,8 +37,9 @@ public class Main {
 				Task newT=new Task();
 				String tmp=FileOperation.readFile((String) pathTaskFiles.get(i));;
 				String[] T=tmp.split("\\r?\\n");
-				if(T.length<6) {Info.err("One of your task configure file is unqualified!"); System.exit(0);}
+				if(T.length<6) {Info.err("One of your task configure file is unqualified! See READ_ME.pdf."); System.exit(0);}
 				newT.name=T[0]; newT.id=Integer.parseInt(T[1]); newT.pathFrom=T[2]; newT.pathTo=T[3]; newT.freq=Integer.parseInt(T[4]); newT.delay=Integer.parseInt(T[5]);
+				ids.add(newT.id);
 				newT.FileMD_new=new HashMap<String,String>(); newT.FileMD_old=new HashMap<String,String>();
 				Share.curentTask=newT;
 				
@@ -51,8 +55,10 @@ public class Main {
 			}
 		/*User interaction*/
 			while(true) {
+				boolean validCmd=false;
 				Scanner sc=new Scanner(System.in); String cmd=sc.nextLine();
 				if(cmd.equals("extract")) {
+					validCmd=true;
 					pauseAllTask();
 					Info.out("Please input the task id that you want to extract: ");
 					int id=Integer.parseInt(sc.nextLine());
@@ -79,12 +85,12 @@ public class Main {
 					TreeMap<String,String> Fmap=new TreeMap<String,String>();
 					for(int i=0;i<=to;i++) {
 						Timepoint tmptp=(Timepoint) timepoints.get(i);
-						List Flist = new ArrayList<String>(); FileOperation.findFiles(T.pathTo+"\\"+tmptp.path, 0, Flist);
+						List Flist = new ArrayList<String>(); FileOperation.findFiles(T.pathTo+Define.sl+tmptp.path, 0, Flist);
 						for(int j=0;j<Flist.size();j++) {
-							String key=PathUtil.getRightPath(T.pathTo+"\\"+tmptp.path, Flist.get(j).toString()), val=Flist.get(j).toString();
+							String key=PathUtil.getRightPath(T.pathTo+Define.sl+tmptp.path, Flist.get(j).toString()), val=Flist.get(j).toString();
 							Fmap.put(key, val);
 						}
-						String[] tmp1=FileOperation.readFile(T.pathTo+"\\"+tmptp.path+"\\"+Define.delListFileName).split("\\r\\n");
+						String[] tmp1=FileOperation.readFile(T.pathTo+Define.sl+tmptp.path+Define.sl+Define.delListFileName).split("\\r\\n");
 						for(int j=0;j<tmp1.length;j++) Fmap.remove(tmp1[j]);
 						
 					}
@@ -94,7 +100,7 @@ public class Main {
 					while (it.hasNext()) {
 						SS tmp1=new SS();
 					    Entry<String, String> E = it.next();
-					    tmp1.a=E.getValue(); tmp1.b=outpath+"\\"+E.getKey();
+					    tmp1.a=E.getValue(); tmp1.b=outpath+Define.sl+E.getKey();
 					    cpyList.add(tmp1); File tmpf= new File(tmp1.a);
 					    allSize+=tmpf.length()/1073741824;
 					}
@@ -110,19 +116,25 @@ public class Main {
 						}
 					}
 					System.out.println("");
-					FileOperation.delFile(outpath+"\\"+Define.delListFileName);
+					FileOperation.delFile(outpath+Define.sl+Define.delListFileName);
 					Info.out("Done extraction.\r\nPress any key to continue...");
 					sc.nextLine();
 					unpauseAllTask();
 				}
-				if(cmd.equals("pause")) pauseAllTask();
-				if(cmd.equals("continue")) unpauseAllTask();
+				if(cmd.equals("pause")) {validCmd=true; pauseAllTask();}
+				if(cmd.equals("continue")) {validCmd=true; unpauseAllTask();}
 				if(cmd.equals("exit")) {
+					validCmd=true;
 					pauseAllTask();
 					System.exit(0);
 				}
-				if(cmd.equals("version")) Info.out(FileOperation.readFile("Version.txt"));
-				if(cmd.equals("help")) Info.out("Executable commands:  pause  continue  exit  version  help");
+				if(cmd.equals("version")) {validCmd=true; Info.out(FileOperation.readFile("Version.txt"));}
+				if(cmd.equals("help")) {
+					validCmd=true;
+					System.out.print("\r\n-----------Author information-----------\r\n"+"Author	: Skylark\r\n" + "Contact	: QQ2991742773\r\n" + "E-mail	: 2991742773@qq.com\n"+"----------------------------------------\r\n\r\n");
+					System.out.println("Available commands:\n        pause\n        continue\n        exit\n        version\n        help");
+				}
+				if(validCmd==false) Info.out("Invalid command, type \"help\" or see READ_ME.pdf to learn more.");
 			}
 	}
 	public static void outputMap(int T) {
@@ -133,24 +145,24 @@ public class Main {
 	    }
 	}
 	public static boolean allPaused() {
-		for(int i=0;i<Define.MaxTaskN-1;i++) if(Share.thpool[i]!=null && Share.thpool[i].running) return false;
+		for(int i=0;i<ids.size();i++) if(Share.thpool[(int) ids.get(i)].running) return false;
 		return true;
 	}
 	public static boolean allRnning() {
-		for(int i=0;i<Define.MaxTaskN-1;i++) if(Share.thpool[i]!=null && !Share.thpool[i].running) return false;
+		for(int i=0;i<ids.size();i++) if(!Share.thpool[(int) ids.get(i)].running) return false;
 		return true;
 	}
 	public static void pauseAllTask() throws InterruptedException {
 		Share.pause=true;
 		Info.out("Waiting all tasks be finished...");
 		int tmp=0; while(!allPaused()) {Thread.sleep(1000); tmp++; System.out.print("."); if(tmp>=40) {tmp=0; System.out.println("");}}
-		System.out.println(""); Info.out("All tasks were finished and shutdowned.");
+		if(tmp>0) System.out.println(""); Info.out("All tasks were finished and shutdowned.");
 	}
 	public static void unpauseAllTask() throws InterruptedException {
 		Share.pause=false;
 		Info.out("Starting all tasks...");
-		int tmp=0; while(!allRnning()) {Thread.sleep(100); tmp++; System.out.print("."); if(tmp>=38) {tmp=0; System.out.println("");}}
-		System.out.println(""); Info.out("All tasks were started.");
+		//int tmp=0; while(!allRnning()) {Thread.sleep(1000); tmp++; System.out.print("."); if(tmp>=38) {tmp=0; System.out.println("");}}
+		/*if(tmp>0) System.out.println(""); */Info.out("All tasks were started.");
 	}
 }
 class SS{String a,b;}

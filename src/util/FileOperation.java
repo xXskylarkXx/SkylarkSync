@@ -80,8 +80,8 @@ public class FileOperation {
         if(!Fto.exists()) Fto.mkdir();
         File[] tmpfiles=Ffrom.listFiles();
         for (File file : tmpfiles)
-        	if (file.isFile()) cpyFile(from+"\\"+file.getName(), to+"\\"+file.getName());
-            else cpyFolder(from+"\\"+file.getName(), to+"\\"+file.getName());
+        	if (file.isFile()) cpyFile(from+Define.sl+file.getName(), to+Define.sl+file.getName());
+            else cpyFolder(from+Define.sl+file.getName(), to+Define.sl+file.getName());
 	}
 	public static void delFile(String path) {File F=new File(path); F.delete();}
 	public static void creatAllFolder(String path) {
