@@ -40,6 +40,12 @@ public class FileOperation {
 	    try {while((buflen=in.read(buf))!=-1) out.write(buf,0,buflen);} catch (IOException e) {e.printStackTrace();}
 	    try {in.close();} catch (IOException e) {e.printStackTrace();}   try {out.close();} catch (IOException e) {e.printStackTrace();}
 	}
+	public static void moveFile(String from,String to) {
+		File Ffrom=new File(from), Fto=new File(to);
+		if(Fto.exists()) {delFile(to);  Fto=new File(to);}
+		else if(!Fto.getParentFile().exists()) Fto.getParentFile().mkdirs();
+		Ffrom.renameTo(Fto);
+	}
 	public static void writeFile(String fileName,String content) throws IOException {
 		if(fileName.equals("")) return;
 	    File file = new File(fileName);

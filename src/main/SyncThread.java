@@ -14,9 +14,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.apache.commons.codec.digest.DigestUtils;
-
 import java.util.Map.Entry;
 
 import share.Define;
@@ -56,7 +53,6 @@ public class SyncThread extends Thread{
 					continue;
 				}
 			}
-			T.FileMD_new.clear(); T.FileMD_old.clear(); System.gc();
 			/*Main thread interaction*/
 				running=true;
 				Info.out("Task"+T.id+"("+T.name+")"+" Start synchronize...");
@@ -128,6 +124,7 @@ public class SyncThread extends Thread{
 				T.timepointN++;
 				Info.out("Task"+T.id+"("+T.name+")"+" Save task data finished.");
 				Info.out("Task"+T.id+"("+T.name+")"+" Synchronized.");
+				T.FileMD_new.clear(); T.FileMD_old.clear(); System.gc();
 		}
 	}
 	public void limitCPU_usage(int requestFreq) {

@@ -2,6 +2,8 @@ package share;
 
 public class Define {
 	public static int MaxTaskN=8192;
+	public static long nd=1000*24*60*60;
+	public static long nh=1000*60*60;
 	public static String sl="/";
 	public static String pathTaskbin="tasks";
 	public static String dataFolder=".data_xXSkylarkSyncXx_data";
