@@ -18,56 +18,41 @@ import share.Define;
 import share.Share;
 import share.Timepoint;
 import util.FileOperation;
-import util.Info;
 import util.PathUtil;
 
 public class Optimization {
 	public static int optimize(int taskid) throws ParseException, IOException, InterruptedException {
-		//judge
-		List<Timepoint> timepoints=Main.getTimePointList(taskid);
+		List<Timepoint> timepoints=null;
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
-		/*boolean cnt=false;
-		for(int i=0;i<timepoints.size();i++) {
-			Date cur=sdf.parse(timepoints.get(i).time), now=sdf.parse(sdf.format(System.currentTimeMillis()));
-			long timegap_now=now.getTime()-cur.getTime();
-			if(timegap_now<=Define.nd*10 && timegap_now>Define.nd) {cnt=true; break;}
-			if(timegap_now<=Define.nd*30 && timegap_now>Define.nd*10) {cnt=true; break;}
-			if(timegap_now>Define.nd*30) {cnt=true; break;}
-		}
-		if(cnt==true) {
-			Info.out("It's too early to optimize within 4 days.");
-			return -1;
-		}
-		//optimize*/
 		boolean repeat; int delN=0;
 	    do{
 	    	repeat=false; timepoints=Main.getTimePointList(taskid); 
 	    	for(int i=timepoints.size()-1;i>0;i--) {
 		    	Date newer=sdf.parse(timepoints.get(i).time), older=sdf.parse(timepoints.get(i-1).time), now=sdf.parse(sdf.format(System.currentTimeMillis()));
-		    	long timegap_now=now.getTime()-newer.getTime(), timegap_interval=newer.getTime()-older.getTime();
+		    	long timegap_now=now.getTime()-older.getTime(), timegap_interval=newer.getTime()-older.getTime();
 		    	if(timegap_now<=Define.nd) {
-		    		if(timegap_interval<Define.nh*6) {
+		    		if(timegap_interval<Define.nh*2) {
 		    			mergeTimePoint(taskid,i-1,i);
 		    			repeat=true; delN++;
 		    			break;
 		    		}
 		    	}
-		    	if(timegap_now<=Define.nd*10 && timegap_now>Define.nd) {
-		    		if(timegap_interval<Define.nd*3) {
+		    	if(timegap_now<=Define.nd*3 && timegap_now>Define.nd) {
+		    		if(timegap_interval<Define.nd) {
 		    			mergeTimePoint(taskid,i-1,i);
 		    			repeat=true; delN++;
 		    			break;
 		    		}
 		    	}
-		    	if(timegap_now<=Define.nd*30 && timegap_now>Define.nd*10) {
-		    		if(timegap_interval<Define.nd*10) {
+		    	if(timegap_now<=Define.nd*30 && timegap_now>Define.nd*3) {
+		    		if(timegap_interval<Define.nd*9) {
 		    			mergeTimePoint(taskid,i-1,i);
 		    			repeat=true; delN++;
 		    			break;
 		    		}
 		    	}
 		    	if(timegap_now>Define.nd*30) {
-		    		if(timegap_interval<Define.nd*60) {
+		    		if(timegap_interval<Define.nd*30) {
 		    			mergeTimePoint(taskid,i-1,i);
 		    			repeat=true; delN++;
 		    			break;

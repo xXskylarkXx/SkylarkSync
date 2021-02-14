@@ -32,7 +32,7 @@ public class SyncThread extends Thread{
 		Share.doneCpyTask=true;
 		boolean firstload=true;
 		Info.out("Task"+T.id+"("+T.name+")"+" loaded successfully");
-		try {Thread.sleep(10000);} catch (InterruptedException e) {e.printStackTrace();}
+		try {Thread.sleep(10000);} catch (InterruptedException e) {/*e.printStackTrace();*/ return;}
 		while(!stop) {
 			/*Sleep*/
 			running=false;
@@ -40,16 +40,16 @@ public class SyncThread extends Thread{
 				for(int i=0;i<(T.freq*60000)/1000;i++) {
 					cnt=false;
 					if(Share.pause) {cnt=true; break;}
-					try {Thread.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
+					try {Thread.sleep(1000);} catch (InterruptedException e) {/*e.printStackTrace();*/return;}
 				}
 				if(cnt) {
-					try {Thread.sleep(100);} catch (InterruptedException e) {e.printStackTrace();}
+					try {Thread.sleep(100);} catch (InterruptedException e) {/*e.printStackTrace();*/return;}
 					continue;
 				}
 			}else{
 				firstload=false;
 				if(Share.pause) {
-					try {Thread.sleep(100);} catch (InterruptedException e) {e.printStackTrace();}
+					try {Thread.sleep(100);} catch (InterruptedException e) {/*e.printStackTrace();*/return;}
 					continue;
 				}
 			}
@@ -121,11 +121,30 @@ public class SyncThread extends Thread{
 				/*Synchronized ,saving data*/
 				try {FileOperation.writeFileTxt(T.pathTo+Define.sl+T.timepointN+"__"+nowTime+Define.sl+Define.delListFileName, delFileList);} catch (IOException e1) {e1.printStackTrace();}
 				try {FileOperation.writeFileTxt(T.pathTo+Define.sl+Define.dataFolder+Define.sl+"FilesLastModifiedDate.txt",mapToString(T.FileMD_new));} catch (IOException e) {e.printStackTrace();}
+				try {addFlotDat(Math.round(totalCpySize/1048576.0/1024));} catch (IOException e) {e.printStackTrace();}
 				T.timepointN++;
 				Info.out("Task"+T.id+"("+T.name+")"+" Save task data finished.");
 				Info.out("Task"+T.id+"("+T.name+")"+" Synchronized.");
 				T.FileMD_new.clear(); T.FileMD_old.clear(); System.gc();
 		}
+	}
+	public void addFlotDat(long newDat) throws IOException {
+		T.flotDat.add(newDat);
+		if(T.flotDat.size()>Define.flotMaxPreserveN) {
+			List<Long> tmp=new ArrayList<Long>();
+			for(int i=0;i<Define.flotPreserveN;i++) {
+				int j=T.flotDat.size()-Define.flotPreserveN+i;
+				tmp.add(T.flotDat.get(j));
+			}
+			T.flotDat.clear();
+			T.flotDat.addAll(tmp);
+		}
+		StringBuffer tmp = new StringBuffer();
+		for(int i=0;i<T.flotDat.size();i++) {
+			tmp.append(T.flotDat.get(i).toString());
+			tmp.append(" ");
+		}
+		FileOperation.writeFileTxt(T.pathTo+Define.sl+Define.dataFolder+Define.sl+Define.flotDatFileName,tmp.toString());
 	}
 	public void limitCPU_usage(int requestFreq) {
 		if(requestFreq<=0) return;

@@ -9,7 +9,7 @@ public class TaskFFindTimer  extends Thread{
 	public void run() {
 		Share.doneCpyTaskFFT=true;
 		while(true) {
-			try {Thread.sleep(0,T.delay*10000);} catch (InterruptedException e) {e.printStackTrace();}
+			try {Thread.sleep(0,T.delay*10000);} catch (InterruptedException e) {/*e.printStackTrace();*/return;}
 			T.active=true;
 		}
 	}

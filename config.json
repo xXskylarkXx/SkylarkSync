@@ -1,0 +1,5 @@
+{
+	"Enable SkylarkConsole": true,
+	"Enable automatic optimization": true,
+	"SkylarkConsole server address": "ws://localhost:8080/SkylarkConsole/Server"
+}

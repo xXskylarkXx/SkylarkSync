@@ -81,6 +81,21 @@ public class FileOperation {
             else resu.add(path);
         }
 	}
+	public static void findCurFolder(String pathName,List<String> resu) throws IOException, InterruptedException{
+        File dirFile = new File(pathName);   
+        if (!dirFile.exists()) return;
+        if (!dirFile.isDirectory()) {
+            if (dirFile.isFile()) {resu.add(pathName); return ;}
+            return ;  
+        }
+        String[] fileList = dirFile.list();
+        for (int i = 0; i < fileList.length; i++) {
+            String string = fileList[i];   
+            File file = new File(dirFile.getPath(),string);  
+            String path = file.getAbsolutePath();
+            if(file.isDirectory()) resu.add(path);
+        }
+	}
 	public static void cpyFolder(String from,String to) throws IOException{
         File Ffrom = new File(from), Fto= new File(to);   
         if(!Fto.exists()) Fto.mkdir();
@@ -121,5 +136,10 @@ public class FileOperation {
 			return md5;
 		}
 		return "null type";
+	}
+	public static boolean isEmptyFolder(String path) {
+		File f=new File(path);
+		if(f.list().length>0) return false;
+		else return true;
 	}
 }
